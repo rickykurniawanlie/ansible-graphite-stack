@@ -1,0 +1,49 @@
+################################################
+# Run Docker Container                         #
+################################################
+- name: Create docker volumes {{ grafana_volume_name }}
+  docker_volume:
+    name: "{{ grafana_volume_name }}"
+    state: present
+
+- name: Run container grafana/grafana
+  docker_container:
+    name: "{{ grafana_container_name }}"
+    image: grafana/grafana
+    ports:
+      - "{{ grafana_admin_port }}:3000"
+    volumes:
+      - "{{ grafana_volume_name }}:/var/lib/grafana"
+    networks:
+      - name: "{{ metrics_network_name }}"
+        ipv4_address: "{{ grafana_local_ipv4 }}"
+    env:
+      GF_SERVER_ROOT_URL: "{{ grafana_server_root_url }}"
+      GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_security_admin_password }}"
+
+################################################
+# Configure nginx                              #
+################################################
+- name: Create/update TLS certificate for {{ grafana_server_name }}
+  command: /opt/certbot/certbot-auto certonly \
+    --nginx \
+    --email {{ letsencrypt_email }} \
+    --domain {{ grafana_server_name }} \
+    --cert-name {{ grafana_server_name }} \
+    --redirect \
+    --agree-tos \
+    --keep-until-expiring \
+    -n
+
+- name: Copy Grafana nginx.conf to sites-enabled
+  template: >
+    src=grafana.conf.j2
+    dest=/etc/nginx/sites-available/{{ grafana_server_name }}
+  notify: restart nginx
+
+- name: Enable Grafana by linking config to sites-enabled
+  file: >
+    dest=/etc/nginx/sites-enabled/{{ grafana_server_name }}
+    src=/etc/nginx/sites-available/{{ grafana_server_name }}
+    state=link
+  notify: restart nginx

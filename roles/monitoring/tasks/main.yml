@@ -1,0 +1,5 @@
+---
+- include_tasks: setup-docker-network.yml
+- include_tasks: setup-graphite.yml
+- include_tasks: setup-grafana.yml
+- include_tasks: setup-collectd.yml

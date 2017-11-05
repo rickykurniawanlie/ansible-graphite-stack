@@ -1,0 +1,10 @@
+---
+- name: Create docker network {{ metrics_network_name }}
+  docker_network:
+    name: "{{ metrics_network_name }}"
+    state: present
+    appends: no
+    ipam_options:
+      subnet: '172.172.0.0/16'
+      gateway: '172.172.0.1'
+      iprange: '172.172.1.0/24'

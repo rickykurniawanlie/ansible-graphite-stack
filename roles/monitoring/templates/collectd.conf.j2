@@ -1,0 +1,55 @@
+FQDNLookup true
+
+LoadPlugin syslog
+<Plugin syslog>
+  LogLevel info
+</Plugin>
+
+LoadPlugin cpu
+LoadPlugin df
+LoadPlugin disk
+LoadPlugin entropy
+LoadPlugin interface
+LoadPlugin load
+LoadPlugin memory
+LoadPlugin processes
+LoadPlugin rrdtool
+LoadPlugin swap
+LoadPlugin users
+LoadPlugin write_graphite
+
+<Plugin df>
+  Device "/dev/vda"
+  MountPoint "/"
+  FSType "ext3"
+</Plugin>
+
+<Plugin interface>
+  Interface "eth0"
+  IgnoreSelected false
+</Plugin>
+
+<Plugin rrdtool>
+  DataDir "/var/lib/collectd/rrd"
+</Plugin>
+
+<Include "/etc/collectd/collectd.conf.d">
+  Filter "*.conf"
+</Include>
+
+<Plugin write_graphite>
+  <Node "graphing">
+    Host "{{ graphite_statsd_local_ipv4 }}"
+    Port "2003"
+    Protocol "tcp"
+    LogSendErrors true
+    Prefix "collectd."
+    StoreRates true
+    AlwaysAppendDS false
+    EscapeCharacter "_"
+  </Node>
+</Plugin>
+
+<Plugin "nginx">
+    URL "http://127.0.0.1/nginx_status"
+</Plugin>

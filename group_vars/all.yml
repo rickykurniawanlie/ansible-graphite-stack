@@ -1,0 +1,48 @@
+---
+################################################
+# Docker Networking                            #
+################################################
+metrics_network_name: metrics-net
+graphite_statsd_local_ipv4: 172.172.1.100
+grafana_local_ipv4: 172.172.1.200
+
+################################################
+# Docker Graphite StatsD (dgs)                 #
+################################################
+# Graphite
+graphite_url: localhost
+graphite_container_name: graphite
+graphite_admin_port: 10080
+
+# Carbon
+carbon_receiver_plaintext_port: 12003
+carbon_receiver_pickle_port: 12004
+carbon_aggregator_plaintext_port: 12023
+carbon_aggregator_pickle_port: 12024
+
+# StatsD
+statsd_udp_port: 18125
+statsd_admin_port: 18126
+
+# Docker volume for graphite-statsd
+dgs_gp_conf_vol: dgs-gp-conf-vol
+dgs_gp_stats_storage_vol: dgs-gp-stats-storage-vol
+dgs_nginx_conf_vol: dgs-nginx-conf-vol
+dgs_statsd_conf_vol: dgs-statsd-conf-vol
+dgs_logrotate_conf_vol: dgs-logrotate-conf-vol
+dgs_log_files_vol: dgs-log-files-vol
+
+################################################
+# Docker Grafana                               #
+################################################
+grafana_volume_name: grafana-vol
+grafana_container_name: grafana
+grafana_server_root_url: https://grafana.rickyk.me
+grafana_admin_port: 13000
+grafana_security_admin_password: admin
+
+################################################
+# NGINX                                        #
+################################################
+graphite_server_name: metrics.rickyk.me
+grafana_server_name: grafana.rickyk.me

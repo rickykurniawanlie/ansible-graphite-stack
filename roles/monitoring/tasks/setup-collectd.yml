@@ -1,0 +1,43 @@
+- name: Install collectd
+  apt: name=collectd update_cache=yes
+
+- name: Install collectd-utils
+  apt: name=collectd-utils update_cache=yes
+
+- name: Copy collectd.conf to /etc/collectd/collectd.conf
+  template: >
+    src=collectd.conf.j2
+    dest=/etc/collectd/collectd.conf
+
+- name: Insert collectd storage-schemas to carbon conf
+  template: >
+    src=storage-schemas.conf.j2
+    dest=/var/lib/docker/volumes/{{ dgs_gp_conf_vol }}/_data/storage-schemas.conf
+
+- name: Restart container {{ graphite_container_name }}
+  docker_container:
+    name: "{{ graphite_container_name }}"
+    image: hopsoft/graphite-statsd
+    state: started
+    restart: yes
+    ports:
+      - "{{ graphite_admin_port }}:80"
+      - "{{ carbon_receiver_plaintext_port }}:2003"
+      - "{{ carbon_receiver_pickle_port }}:2004"
+      - "{{ carbon_aggregator_plaintext_port }}:2023"
+      - "{{ carbon_aggregator_pickle_port }}:2024"
+      - "{{ statsd_udp_port }}:8125/udp"
+      - "{{ statsd_admin_port }}:8126"
+    networks:
+      - name: "{{ metrics_network_name }}"
+        ipv4_address: "{{ graphite_statsd_local_ipv4 }}"
+    volumes:
+      - "{{ dgs_gp_conf_vol }}:/opt/graphite/conf"
+      - "{{ dgs_gp_stats_storage_vol }}:/opt/graphite/storage"
+      - "{{ dgs_nginx_conf_vol }}:/etc/nginx"
+      - "{{ dgs_statsd_conf_vol }}:/opt/statsd"
+      - "{{ dgs_logrotate_conf_vol }}:/etc/logrotate.d"
+      - "{{ dgs_log_files_vol }}:/var/log"
+
+- name: Restart collectd
+  service: name=collectd state=restarted

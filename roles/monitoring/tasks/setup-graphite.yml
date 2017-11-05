@@ -1,0 +1,65 @@
+---
+################################################
+# Run Docker Container                         #
+################################################
+- name: Create several docker volumes
+  docker_volume:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - "{{ dgs_gp_conf_vol }}"
+    - "{{ dgs_gp_stats_storage_vol }}"
+    - "{{ dgs_nginx_conf_vol }}"
+    - "{{ dgs_statsd_conf_vol }}"
+    - "{{ dgs_logrotate_conf_vol }}"
+    - "{{ dgs_log_files_vol }}"
+
+- name: Restart container hopsoft/graphite-statsd
+  docker_container:
+    name: "{{ graphite_container_name }}"
+    image: hopsoft/graphite-statsd
+    ports:
+      - "{{ graphite_admin_port }}:80"
+      - "{{ carbon_receiver_plaintext_port }}:2003"
+      - "{{ carbon_receiver_pickle_port }}:2004"
+      - "{{ carbon_aggregator_plaintext_port }}:2023"
+      - "{{ carbon_aggregator_pickle_port }}:2024"
+      - "{{ statsd_udp_port }}:8125/udp"
+      - "{{ statsd_admin_port }}:8126"
+    networks:
+      - name: "{{ metrics_network_name }}"
+        ipv4_address: "{{ graphite_statsd_local_ipv4 }}"
+    volumes:
+      - "{{ dgs_gp_conf_vol }}:/opt/graphite/conf"
+      - "{{ dgs_gp_stats_storage_vol }}:/opt/graphite/storage"
+      - "{{ dgs_nginx_conf_vol }}:/etc/nginx"
+      - "{{ dgs_statsd_conf_vol }}:/opt/statsd"
+      - "{{ dgs_logrotate_conf_vol }}:/etc/logrotate.d"
+      - "{{ dgs_log_files_vol }}:/var/log"
+
+################################################
+# Configure nginx                              #
+################################################
+- name: Create/update TLS certificate for {{ graphite_server_name }}
+  command: /opt/certbot/certbot-auto certonly \
+    --nginx \
+    --email {{ letsencrypt_email }} \
+    --domain {{ graphite_server_name }} \
+    --cert-name {{ graphite_server_name }} \
+    --redirect \
+    --agree-tos \
+    --keep-until-expiring \
+    -n
+
+- name: Copy Graphite nginx.conf to sites-enabled
+  template: >
+    src=graphite.conf.j2
+    dest=/etc/nginx/sites-available/{{ graphite_server_name }}
+  notify: restart nginx
+
+- name: Enable metrics by linking config to sites-enabled
+  file: >
+    dest=/etc/nginx/sites-enabled/{{ graphite_server_name }}
+    src=/etc/nginx/sites-available/{{ graphite_server_name }}
+    state=link
+  notify: restart nginx
